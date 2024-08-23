@@ -1,0 +1,31 @@
+import MobileSidebar from "@/components/mobile-sidebar";
+import Navbar from "@/components/navbar";
+import Sidebar from "@/components/sidebar"; // Make sure to import Sidebar
+import { Providers } from "../providers";
+import { getApiLimitCount } from "@/lib/api-limt";
+
+const DashboardLayout = async({
+  children
+}: {
+  children: React.ReactNode;
+}) => {
+  const apiLimitCount=await getApiLimitCount();
+
+  return (
+    <div className="h-full relative">
+      <div className="hidden h-full md:flex md:w-60 md:flex-col md:fixed md:inset-y-0 z-[80] bg-gray-900">
+     
+        <Sidebar apiLimitCount={0}/> {/* Include the Sidebar component here */}
+      </div>
+      <main className="md:pl-60"> {/* Adjusted padding to match the sidebar width */}
+      <Providers>
+        <Navbar />
+        {children}
+        </Providers>
+      </main>
+      
+    </div>
+  );
+}
+
+export default DashboardLayout;
