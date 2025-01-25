@@ -3,7 +3,7 @@ import { MAX_FREE_COUNTS } from "@/constants";
 import { useEffect, useState } from "react";
 
 import { useProModal } from "@/hooks/use-pro-modal";
-import { Card, CardContent } from "../ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@radix-ui/react-progress";
 import { Button } from "../ui/button";
 // ("use client");

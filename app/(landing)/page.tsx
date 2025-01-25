@@ -11,7 +11,7 @@ const LandingPage = () => {
     window.location.href = "https://demopr.rf.gd/";
   }, []);
 
-  return <div>Landing Page (UnProtected)</div>;
+  return <div><strong>Redirect the user to the specified page upon successful authentication. (UnProtected)</strong></div>;
 };
 
 export default LandingPage;

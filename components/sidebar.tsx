@@ -17,6 +17,7 @@ import {
   Mic,
   ImageDown,
   ImagePlus,
+  ScanEye,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 
@@ -43,6 +44,13 @@ const routes = [
     icon: ImageIcon,
     color: "text-pink-700",
     href: "/image",
+  },
+  {
+    label: "SmartSense",
+    icon: ScanEye,
+    color: "text-blue-700",
+    bgColor: "bg-blue-700/10",
+    href: "/smart",
   },
   {
     label: "Remove Background",
@@ -143,7 +151,7 @@ const Sidebar = ({ apiLimitCount = 0, isPro = false }: SidebarProps) => {
           ))}
         </div>
       </div>
-      <FreeCounter apiLimitCount={apiLimitCount} />
+      
     </div>
   );
 };
