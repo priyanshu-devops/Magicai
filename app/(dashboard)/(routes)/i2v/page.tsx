@@ -1,217 +1,225 @@
+
 'use client';
 
-import { useState } from 'react';
-import Replicate from 'replicate';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useForm } from 'react-hook-form';
-import { useRouter } from 'next/navigation';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import confetti from 'canvas-confetti';
-
+import axios from 'axios';
 import { Heading } from '@/components/heading';
 import { Button } from '@/components/ui/button';
-import { Card, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Form, FormControl, FormField, FormItem } from '@/components/ui/form';
 import { Loader } from '@/components/loader';
-import { Empty } from '@/components/ui/empty';
-import { ImageIcon } from 'lucide-react';
-
-import Meteors from '@/components/magicui/meteors';
+import { Copy, ImagePlayIcon, Timer, Download, Eye, X, RefreshCw } from 'lucide-react';
 
 const formSchema = z.object({
-  file: z
-    .any()
-    .refine((file) => file && file.length > 0, 'File is required')
-    .transform((file) => file && file[0]),
+  file: z.any().refine((file) => file && file.length > 0, 'File is required').transform((file) => file && file[0]),
 });
 
 const ImagePage = () => {
-  const router = useRouter();
-
   const [originalImage, setOriginalImage] = useState<string | null>(null);
-  const [processedImage, setProcessedImage] = useState<string | null>(null);
+  const [uuidList, setUuidList] = useState<any[]>(JSON.parse(localStorage.getItem('uuidList') || '[]'));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [manualUUID, setManualUUID] = useState('');
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null); // Stores the URL of the video for preview
+  const [isChecking, setIsChecking] = useState(false);
 
-  const form = useForm({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      file: null,
-    },
-  });
+  const form = useForm({ resolver: zodResolver(formSchema), defaultValues: { file: null } });
 
-  const isLoading = form.formState.isSubmitting || loading;
+  useEffect(() => {
+    localStorage.setItem('uuidList', JSON.stringify(uuidList));
+  }, [uuidList]);
 
   const onSubmit = async (values: any) => {
     try {
       setLoading(true);
-      setOriginalImage(null);
-      setProcessedImage(null);
       setError(null);
 
-      const formData = new FormData();
-      formData.append('image', values.file);
+      const file = values.file;
+      const reader = new FileReader();
 
-      const replicate = new Replicate({
-        auth: process.env.NEXT_PUBLIC_REPLICATE_API_TOKEN,
-      });
+      reader.onloadend = async () => {
+        const base64Image = reader.result?.toString().split(',')[1];
 
-      const output = await replicate.run(
-        'philz1337x/clarity-upscaler:dfad41707589d68ecdccd1dfa600d55a208f9310748e44bfe35b4a6291453d5e',
-        {
-          input: {
-            seed: 1337,
-            image: URL.createObjectURL(values.file),
-            prompt: 'masterpiece, best quality, highres, <lora:more_details:0.5> <lora:SDXLrender_v2.0:1>',
-            dynamic: 6,
-            handfix: 'disabled',
-            pattern: false,
-            sharpen: 0,
-            sd_model: 'juggernaut_reborn.safetensors [338b85bc4f]',
-            scheduler: 'DPM++ 3M SDE Karras',
-            creativity: 0.35,
-            lora_links: '',
-            downscaling: false,
-            resemblance: 0.6,
-            scale_factor: 2,
-            tiling_width: 112,
-            output_format: 'png',
-            tiling_height: 144,
-            custom_sd_model: '',
-            negative_prompt: '(worst quality, low quality, normal quality:2) JuggernautNegative-neg',
-            num_inference_steps: 18,
-            downscaling_resolution: 768
-          },
+        if (!base64Image) {
+          setError("Failed to process image.");
+          setLoading(false);
+          return;
         }
-      );
 
-      const imageUrl = output.output; // Adjust based on actual response
+        const response = await axios.post(
+          'https://runwayml.p.rapidapi.com/generate/image',
+          {
+            img_prompt: `data:image/png;base64,${base64Image}`,
+            model: 'gen3',
+            image_as_end_frame: false,
+            flip: false,
+            motion: 5,
+            seed: 0,
+            callback_url: '',
+            time: 5,
+          },
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'x-rapidapi-host': 'runwayml.p.rapidapi.com',
+              'x-rapidapi-key': process.env.NEXT_PUBLIC_RAPIDAPI_KEY,
+            },
+          }
+        );
 
-      setOriginalImage(URL.createObjectURL(values.file));
-      setProcessedImage(imageUrl);
+        const newUUID = { uuid: response.data.uuid, status: 'Pending', url: '', timer: 600 };
+        setUuidList([...uuidList, newUUID]);
+        setOriginalImage(URL.createObjectURL(values.file));
+      };
 
-      confetti({
-        particleCount: 100,
-        spread: 70,
-        origin: { y: 0.6 },
-      });
+      reader.readAsDataURL(file);
     } catch (error) {
       console.error('Error processing image:', error);
-      setError('Failed to process image. Please try again.');
+      setError('Failed to generate video. Please try again.');
     } finally {
       setLoading(false);
-      router.refresh();
     }
   };
 
-  const downloadImage = (url: string) => {
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'processed_image.png';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+  const checkStatus = async (uuid: string) => {
+    setIsChecking(true);
+    try {
+      const response = await axios.get(`https://runwayml.p.rapidapi.com/status?uuid=${uuid}`, {
+        headers: {
+          'x-rapidapi-host': 'runwayml.p.rapidapi.com',
+          'x-rapidapi-key': process.env.NEXT_PUBLIC_RAPIDAPI_KEY,
+        },
+      });
+
+      setUuidList((prev) =>
+        prev.map((item) =>
+          item.uuid === uuid ? { ...item, status: response.data.status, url: response.data.url } : item
+        )
+      );
+    } catch (error) {
+      console.error('Error checking status:', error);
+    } finally {
+      setIsChecking(false);
+    }
   };
 
+  const addManualUUID = () => {
+    if (manualUUID.trim()) {
+      setUuidList([...uuidList, { uuid: manualUUID, status: 'Pending', url: '', timer: 600 }]);
+      setManualUUID('');
+    }
+  };
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setUuidList((prev) =>
+        prev.map((item) =>
+          item.timer > 0 ? { ...item, timer: item.timer - 1 } : item
+        )
+      );
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
-    <div className="relative min-h-screen overflow-hidden bg-gray-100 dark:bg-[#080c14] text-black dark:text-white">
-      <Meteors number={20} />
-      <div className="relative z-10 h-full overflow-hidden p-4 lg:p-8">
-        <Heading
-          title="Process Image"
-          description="Upload an image to process it."
-          icon={ImageIcon}
-          iconColor="text-pink-700"
-          bgColor="bg-pink-700/10"
+    <div className="min-h-screen bg-gray-100 dark:bg-[#080c14] text-black dark:text-white p-8">
+      <Heading
+        title="Image to Video"
+        description="Upload an image to convert it into a video."
+        icon={ImagePlayIcon}
+        iconColor="text-pink-700"
+        bgColor="bg-pink-700/10"
+      />
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <Input
+          type="file"
+          accept="image/*"
+          disabled={loading}
+          onChange={(e) => {
+            const file = e.target.files;
+            if (file) {
+              form.setValue('file', file);
+            }
+          }}
         />
-        <div className="px-4 lg:px-8">
-          <Form {...form}>
-            <form
-              onSubmit={form.handleSubmit(onSubmit)}
-              className="
-                rounded-lg 
-                border 
-                w-full 
-                p-4 
-                px-3 
-                md:px-6 
-                focus-within:shadow-sm
-                grid
-                grid-cols-12
-                gap-2
-                bg-white
-                dark:bg-[#080c14]
-                border-gray-200
-                dark:border-[#080c14]
-              "
-            >
-              <FormField
-                name="file"
-                render={({ field }) => (
-                  <FormItem className="col-span-12">
-                    <FormControl className="m-0 p-0">
-                      <Input
-                        type="file"
-                        accept="image/*"
-                        disabled={isLoading}
-                        onChange={(e) => {
-                          const file = e.target.files;
-                          if (file) {
-                            form.setValue('file', file);
-                          }
-                        }}
-                        className="border-0 outline-none focus-visible:ring-0 focus-visible:ring-transparent bg-white dark:bg-[#080c14] text-black dark:text-white"
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-              <Button
-                className="col-span-12 w-full"
-                type="submit"
-                disabled={isLoading}
-              >
-                Process Image
-              </Button>
-            </form>
-          </Form>
-          {isLoading && (
-            <div className="p-20">
-              <Loader />
-            </div>
-          )}
-          {error && <div className="p-4 text-red-500">{error}</div>}
-          {!originalImage && !isLoading && <Empty label="No images uploaded." />}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-8">
-            {originalImage && (
-              <Card className="rounded-lg overflow-hidden">
-                <h3 className="text-center">Original Image</h3>
-                <div className="relative w-full h-64">
-                  <Image fill alt="Original Image" src={originalImage} />
-                </div>
-              </Card>
-            )}
-            {processedImage && (
-              <Card className="rounded-lg overflow-hidden">
-                <h3 className="text-center">Processed Image</h3>
-                <div className="relative w-full h-64">
-                  <Image fill alt="Processed Image" src={processedImage} />
-                </div>
-                <CardFooter className="p-2">
-                  <Button
-                    className="w-full"
-                    onClick={() => downloadImage(processedImage)}
-                  >
-                    Download
-                  </Button>
-                </CardFooter>
-              </Card>
-            )}
+        <Button type="submit" disabled={loading}>Convert to Video</Button>
+      </form>
+      {loading && <Loader />}
+      {error && <div className="text-red-500">{error}</div>}
+
+      {originalImage && (
+        <div className="mt-4">
+          <Image src={originalImage} alt="Original" width={200} height={200} className="rounded" />
+        </div>
+      )}
+
+      {/* Manual UUID Input */}
+      <div className="mt-6 flex gap-2">
+        <Input
+          type="text"
+          placeholder="Enter UUID manually"
+          value={manualUUID}
+          onChange={(e) => setManualUUID(e.target.value)}
+        />
+        <Button onClick={addManualUUID}>Add UUID</Button>
+      </div>
+
+      {uuidList.length > 0 && (
+        <div className="mt-6 border rounded-lg p-4 bg-white dark:bg-[#080c14]">
+          <table className="w-full border-collapse border border-gray-300 dark:border-gray-600">
+            <thead>
+              <tr className="bg-gray-200 dark:bg-gray-800">
+                <th className="p-2 text-left border">UUID</th>
+                <th className="p-2 text-left border">Timer</th>
+                <th className="p-2 text-left border">Status</th>
+                <th className="p-2 text-left border">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {uuidList.map((item, index) => (
+                <tr key={index} className="border">
+                  <td className="p-2 text-left border">{item.uuid}</td>
+                  <td className="p-2 text-left border flex items-center gap-2">
+                    <Timer className="inline-block w-4 h-4 mr-1" /> {item.timer}s
+                  </td>
+                  <td className="p-2 text-left border">{item.status}</td>
+                  <td className="p-2 text-left border flex gap-2">
+                    <Button variant="outline" size="icon" onClick={() => navigator.clipboard.writeText(item.uuid)}>
+                      <Copy className="w-4 h-4" />
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => checkStatus(item.uuid)} disabled={isChecking}>
+                      <RefreshCw className="w-4 h-4 text-blue-500" />
+                    </Button>
+                    {item.url && (
+                      <>
+                        <Button variant="outline" onClick={() => setPreviewUrl(item.url)}>
+                          <Eye className="w-4 h-4 text-green-500" />
+                        </Button>
+                        <a href={item.url} download>
+                          <Button variant="outline"><Download className="w-4 h-4 text-purple-500" /></Button>
+                        </a>
+                      </>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Video Preview Modal */}
+      {previewUrl && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+          <div className="bg-white p-4 rounded-lg">
+            <video src={previewUrl} controls className="w-[600px] h-[400px]" />
+            <Button onClick={() => setPreviewUrl(null)}><X className="w-4 h-4" /></Button>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

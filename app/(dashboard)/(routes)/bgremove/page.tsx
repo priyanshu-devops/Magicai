@@ -1,4 +1,4 @@
-'use client';
+"use client";  // Add this line at the top to indicate this is a Client Component
 
 import { useState } from 'react';
 import axios from 'axios';
@@ -9,7 +9,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import confetti from 'canvas-confetti';
 
-import { ImageIcon } from 'lucide-react';
+import { ImageDown, ImagePlus, UploadIcon } from 'lucide-react'; // Import the Upload icon
 import { Heading } from '@/components/heading';
 import { Button } from '@/components/ui/button';
 import { Card, CardFooter } from '@/components/ui/card';
@@ -20,11 +20,11 @@ import { Empty } from '@/components/ui/empty';
 
 import Meteors from '@/components/magicui/meteors';
 
+// Update the schema to expect a single file, not an array
 const formSchema = z.object({
   file: z
-    .any()
-    .refine((file) => file && file.length > 0, 'File is required')
-    .transform((file) => file && file[0]),
+    .instanceof(File)  // Ensure it's a File object
+    .refine((file) => file !== null, 'File is required'),
 });
 
 const ImagePage = () => {
@@ -49,7 +49,7 @@ const ImagePage = () => {
       setLoading(true);
       setOriginalImage(null);
       setProcessedImage(null);
-      setError(null);
+      setError(null); // Reset error message
 
       const formData = new FormData();
       formData.append('image_file', values.file);
@@ -73,6 +73,7 @@ const ImagePage = () => {
       setOriginalImage(URL.createObjectURL(values.file));
       setProcessedImage(url);
 
+      // Only trigger confetti if no error
       confetti({
         particleCount: 100,
         spread: 70,
@@ -83,7 +84,7 @@ const ImagePage = () => {
       setError('Failed to remove background. Please try again.');
     } finally {
       setLoading(false);
-      router.refresh();
+      router.refresh(); // Refresh only after the process is complete
     }
   };
 
@@ -96,6 +97,11 @@ const ImagePage = () => {
     document.body.removeChild(a);
   };
 
+  const handleRemoveImage = () => {
+    setOriginalImage(null);
+    setProcessedImage(null);
+  };
+
   return (
     <div className="relative min-h-screen overflow-hidden bg-gray-100 dark:bg-[#080c14] text-black dark:text-white">
       <Meteors number={20} />
@@ -103,8 +109,8 @@ const ImagePage = () => {
         <Heading
           title="Remove Background"
           description="Upload an image to remove its background."
-          icon={ImageIcon}
-          iconColor="text-pink-700"
+          icon={ImageDown}
+          iconColor="text-pink-700"  // Change icon color to neutral gray
           bgColor="bg-pink-700/10"
         />
         <div className="px-4 lg:px-8">
@@ -133,18 +139,37 @@ const ImagePage = () => {
                 render={({ field }) => (
                   <FormItem className="col-span-12">
                     <FormControl className="m-0 p-0">
-                      <Input
-                        type="file"
-                        accept="image/*"
-                        disabled={isLoading}
-                        onChange={(e) => {
-                          const file = e.target.files;
-                          if (file) {
-                            form.setValue('file',file);
-                          }
-                        }}
-                        className="border-0 outline-none focus-visible:ring-0 focus-visible:ring-transparent bg-white dark:bg-[#080c14] text-black dark:text-white"
-                      />
+                      <div className="flex items-center gap-4">
+                        <label
+                          htmlFor="file-upload"
+                          className="cursor-pointer flex items-center space-x-2"
+                        >
+                          <ImagePlus className="w-6 h-6 text-pink-700" /> {/* Neutral gray icon */}
+                          <span className="text-sm text-grak-700">Upload Image</span> {/* Neutral gray text */}
+                        </label>
+                        <input
+                          id="file-upload"
+                          type="file"
+                          accept="image/*"
+                          disabled={isLoading}
+                          onChange={(e) => {
+                            const file = e.target.files ? e.target.files[0] : null; // Get the first file if available
+                            if (file) {
+                              form.setValue('file', file); // Set the single file (no array)
+                            }
+                          }}
+                          className="hidden"
+                        />
+                        {originalImage && !isLoading && (
+                          <Button
+                            variant="outline"
+                            onClick={handleRemoveImage}
+                            className="bg-red-500 text-white"
+                          >
+                            Remove Image
+                          </Button>
+                        )}
+                      </div>
                     </FormControl>
                   </FormItem>
                 )}

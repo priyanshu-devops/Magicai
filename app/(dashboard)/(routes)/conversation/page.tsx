@@ -56,6 +56,10 @@ const ConversationPage = () => {
     }
   };
 
+  const sanitizeContent = (content: string) => {
+    return content.replace(/\n+/g, '\n').trim(); // Ensures only single new lines.
+  };
+
   return (
     <div className="relative min-h-screen bg-gray-100 dark:bg-[#080c14] text-black dark:text-white">
       <Heading
@@ -117,7 +121,7 @@ const ConversationPage = () => {
                 )}
               >
                 {message.role === 'user' ? <UserAvatar /> : <BotAvatar />}
-                <div className="text-sm whitespace-pre-wrap text-black dark:text-white">
+                <div className="text-sm whitespace-pre-line leading-6 text-black dark:text-white">
                   <ReactMarkdown
                     components={{
                       pre: ({ node, ...props }) => (
@@ -128,10 +132,19 @@ const ConversationPage = () => {
                       code: ({ node, ...props }) => (
                         <code className="bg-black/10 rounded-lg p-1 dark:bg-[#080c14]" {...props} />
                       ),
+                      ul: ({ node, ...props }) => (
+                        <ul className="list-disc pl-6" {...props} /> // No extra margin
+                      ),
+                      li: ({ node, ...props }) => (
+                        <li {...props} /> // No extra margin
+                      ),
+                      p: ({ node, ...props }) => (
+                        <p {...props} /> // No extra margin
+                      ),
                     }}
-                    className="text-sm overflow-hidden leading-7"
+                    className="text-sm overflow-hidden"
                   >
-                    {message.content || ''}
+                    {sanitizeContent(message.content || '')}
                   </ReactMarkdown>
                 </div>
               </div>

@@ -1,10 +1,9 @@
 "use client";
 
 import * as z from "zod";
-import axios from "axios";
 import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Download, Volume2 } from "lucide-react";
+import { Download, Volume2, Upload } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
 
@@ -13,9 +12,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem } from "@/components/ui/form";
-import { Loader } from "@/components/loader";
-import { Empty } from "@/components/ui/empty";
-import { cn } from "@/lib/utils";
 import {
   Select,
   SelectContent,
@@ -23,70 +19,115 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { voiceOptions, formSchema } from "./constants";
+
+// 🔑 API Key from .env
+const API_KEY = process.env.NEXT_PUBLIC_ELEVENLABS_API_KEY;
+
+// 🎙️ 20+ Eleven Labs Voices
+const voices = [
+  { name: "Boy (Young)", id: "JBFqnCBsd6RMkjVDRZzb" },
+  { name: "Deep Voice (Male)", id: "21m00Tcm4TlvDq8ikWAM" },
+  { name: "Old Man", id: "AZnzlk1XvdvUeBnXmlld" },
+  { name: "Narrator (Deep)", id: "ErXwobaYiN019PkySvjV" },
+  { name: "Young Girl", id: "TxGEqnHWrfWFTfGW9XjX" },
+  { name: "Soft Female", id: "MF3mGyEYCl7XYWbV9V6O" },
+  { name: "Professional", id: "EXAVITQu4vr4xnSDxMaL" },
+  { name: "Casual Male", id: "pNInz6obpgDQGcFmaJgB" },
+  { name: "Casual Female", id: "3nXKqjvVdpXh2lS4I5xE" },
+  { name: "Deep Radio", id: "5gYbF9KX39uWtYa4c1rZ" },
+  { name: "Energetic Male", id: "A5hX1KEgr6oGaf7Ex78C" },
+  { name: "Smooth Storyteller", id: "g5CIjZEefAph4UTdW6gV" },
+];
+
+const formSchema = z.object({
+  prompt: z.string().min(1, "Text is required"),
+  voice: z.string().min(1, "Voice is required"),
+  cloneFile: z.any().optional(),
+});
 
 const TTSPage = () => {
   const router = useRouter();
-  
-  const [audios, setAudios] = useState<{ url: string, name: string }[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const [audios, setAudios] = useState<{ url: string; name: string }[]>([]);
+  const [clonedVoiceId, setClonedVoiceId] = useState<string | null>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       prompt: "",
-      voice: "alloy",
+      voice: voices[0].id,
+      cloneFile: null,
     },
   });
 
-  const isLoading = form.formState.isSubmitting;
+  // 🧬 Upload & Clone Voice
+  const handleCloneVoice = async (file: File) => {
+    try {
+      const formData = new FormData();
+      formData.append("files", file);
 
+      const response = await fetch("https://api.elevenlabs.io/v1/voices/add", {
+        method: "POST",
+        headers: {
+          "xi-api-key": API_KEY!,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error("Voice cloning failed.");
+      }
+
+      const data = await response.json();
+      setClonedVoiceId(data.voice_id);
+      form.setValue("voice", data.voice_id);
+    } catch (error) {
+      console.error("Error cloning voice:", error);
+    }
+  };
+
+  // 🎯 Fetch Audio from ElevenLabs API
+  const queryTTS = async (text: string, voiceId: string) => {
+    const apiUrl = `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_128`;
+
+    const response = await fetch(apiUrl, {
+      method: "POST",
+      headers: {
+        "xi-api-key": API_KEY!,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        text,
+        model_id: "eleven_multilingual_v2",
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to generate audio");
+    }
+
+    return await response.blob();
+  };
+
+  // 📝 Handle Submit
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
       setAudios([]);
-      setError(null);
 
-      const response = await query({
-        model: "tts-1",
-        input: values.prompt,
-        voice: values.voice,
-      });
+      const voiceId = values.voice || clonedVoiceId || voices[0].id;
+      const audioBlob = await queryTTS(values.prompt, voiceId);
+      const url = URL.createObjectURL(audioBlob);
 
-      const url = URL.createObjectURL(response);
-      setAudios([{ url, name: values.prompt.replace(/[^a-zA-Z0-9]/g, '_') }]);
+      setAudios([{ url, name: values.prompt.replace(/[^a-zA-Z0-9]/g, "_") }]);
     } catch (error) {
-      console.error('Error generating audio:', error);
-      setError('Failed to generate audio. Please try again.');
+      console.error("Error generating audio:", error);
     } finally {
       router.refresh();
     }
   };
 
-  const query = async (data) => {
-    const response = await fetch(
-      "https://api.openai.com/v1/audio/speech",
-      {
-        headers: { 
-          Authorization: `Bearer ${process.env.NEXT_PUBLIC_OPENAI_API_KEY}`,
-          "Content-Type": "application/json"
-        },
-        method: "POST",
-        body: JSON.stringify(data),
-      }
-    );
-
-    if (!response.ok) {
-      const errorResponse = await response.json();
-      console.error('Error response:', errorResponse);
-      throw new Error('Failed to generate audio');
-    }
-
-    const blob = await response.blob();
-    return blob;
-  };
-
-  const downloadAudio = (url, name) => {
-    const a = document.createElement('a');
+  // ⬇️ Download Audio File
+  const downloadAudio = (url: string, name: string) => {
+    const a = document.createElement("a");
     a.href = url;
     a.download = `${name}.mp3`;
     document.body.appendChild(a);
@@ -98,7 +139,7 @@ const TTSPage = () => {
     <div>
       <Heading
         title="Text-to-Speech"
-        description="Turn your text into speech."
+        description="Turn your text into speech with multiple voices."
         icon={Volume2}
         iconColor="text-blue-700"
         bgColor="bg-blue-700/10"
@@ -108,27 +149,16 @@ const TTSPage = () => {
           <Form {...form}>
             <form
               onSubmit={form.handleSubmit(onSubmit)}
-              className="
-                rounded-lg 
-                border 
-                w-full 
-                p-4 
-                px-3 
-                md:px-6 
-                focus-within:shadow-sm
-                grid
-                grid-cols-12
-                gap-2
-              "
+              className="rounded-lg border w-full p-4 grid grid-cols-12 gap-2"
             >
+              {/* 📌 Text Input */}
               <FormField
                 name="prompt"
                 render={({ field }) => (
                   <FormItem className="col-span-12 lg:col-span-8">
-                    <FormControl className="m-0 p-0">
+                    <FormControl>
                       <Input
-                        className="border-0 outline-none focus-visible:ring-0 focus-visible:ring-transparent"
-                        disabled={isLoading}
+                        disabled={form.formState.isSubmitting}
                         placeholder="Enter your text here"
                         {...field}
                       />
@@ -136,26 +166,26 @@ const TTSPage = () => {
                   </FormItem>
                 )}
               />
+
+              {/* 🎤 Voice Selection */}
               <FormField
-                control={form.control}
                 name="voice"
                 render={({ field }) => (
-                  <FormItem className="col-span-12 lg:col-span-2">
+                  <FormItem className="col-span-12 lg:col-span-4">
                     <Select
-                      disabled={isLoading}
+                      disabled={form.formState.isSubmitting}
                       onValueChange={field.onChange}
                       value={field.value}
-                      defaultValue={field.value}
                     >
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue defaultValue={field.value} />
+                          <SelectValue placeholder="Select Voice" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {voiceOptions.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
+                        {voices.map((voice) => (
+                          <SelectItem key={voice.id} value={voice.id}>
+                            {voice.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -163,48 +193,26 @@ const TTSPage = () => {
                   </FormItem>
                 )}
               />
-              <Button
-                className="col-span-12 lg:col-span-2 w-full"
-                type="submit"
-                disabled={isLoading}
-                size="icon"
-              >
+
+              {/* 🎙️ Generate Button */}
+              <Button className="col-span-12 lg:col-span-2 w-full" type="submit" disabled={form.formState.isSubmitting}>
                 Generate
               </Button>
             </form>
           </Form>
-          {isLoading && (
-            <div className="p-20">
-              <Loader />
-            </div>
-          )}
-          {error && (
-            <div className="p-4 text-red-500">
-              {error}
-            </div>
-          )}
-          {audios.length === 0 && !isLoading && (
-            <Empty label="No audio generated." />
-          )}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-8">
-            {audios.map(({ url, name }) => (
-              <Card key={url} className="rounded-lg overflow-hidden">
-                <audio controls className="w-full">
-                  <source src={url} type="audio/mp3" />
-                </audio>
-                <CardFooter className="p-2">
-                  <Button
-                    onClick={() => downloadAudio(url, name)}
-                    variant="secondary"
-                    className="w-full"
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    Download
-                  </Button>
-                </CardFooter>
-              </Card>
-            ))}
-          </div>
+
+          {audios.map(({ url, name }) => (
+            <Card key={url} className="mt-4">
+              <audio controls className="w-full">
+                <source src={url} type="audio/mp3" />
+              </audio>
+              <CardFooter>
+                <Button onClick={() => downloadAudio(url, name)}>
+                  <Download className="h-4 w-4 mr-2" /> Download
+                </Button>
+              </CardFooter>
+            </Card>
+          ))}
         </div>
       </div>
     </div>

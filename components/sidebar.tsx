@@ -59,13 +59,7 @@ const routes = [
     bgColor: "bg-blue-700/10",
     href: "/bgremove",
   },
-  {
-    label: "Upscale Image",
-    icon: ImagePlus,
-    color: "text-red-500",
-    bgColor: "bg-red-500/10",
-    href: "/upscale",
-  },
+  
   {
     label: "Image2Video Generation",
     icon: ImagePlay,
@@ -77,14 +71,10 @@ const routes = [
     label: "Video Generation",
     icon: VideoIcon,
     color: "text-orange-400",
+    bgColor:"text-orange-400/10",
     href: "/video",
   },
-  {
-    label: "Music Generation",
-    icon: Music,
-    color: "text-emerald-500",
-    href: "/music",
-  },
+  
   {
     label: "Code Generation",
     icon: Code,
@@ -108,7 +98,7 @@ const routes = [
   {
     label: "Settings",
     icon: Settings,
-    href: "/settings",
+    href: "/setting",
   },
   
 ];

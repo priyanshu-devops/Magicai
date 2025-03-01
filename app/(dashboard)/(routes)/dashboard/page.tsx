@@ -27,20 +27,8 @@ const tools = [
     bgColor: "bg-blue-700/10",
     href: "/bgremove",
   },
-  {
-    label: " Upscale Image",
-    icon: ImagePlus,
-    color: "text-red-500",
-    bgColor: "bg-red-500/10",
-    href: "/code",
-  },
-  {
-    label: "Music Generation",
-    icon: Music,
-    color: "text-emerald-500",
-    bgColor: "bg-emerald-500/10",
-    href: "/music",
-  },
+  
+  
   {
     label: "Video Generation",
     icon: VideoIcon,
@@ -60,21 +48,21 @@ const tools = [
     icon: ImagePlay,
     color: "text-emerald-400",
     bgColor: "bg-emerald-400/10",
-    href: "/code",
+    href: "/i2v",
   },
   {
     label: " Text2Speech Generation",
     icon: Speech,
     color: "text-purple-500",
     bgColor: "bg-purple-500/10",
-    href: "/code",
+    href: "/t2s",
   },
   {
     label: " Speech2Text Generation",
     icon: Mic,
     color: "text-blue-700",
     bgColor: "bg-blue-700/10",
-    href: "/code",
+    href: "/s2t",
   },
   
 ];

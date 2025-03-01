@@ -1,6 +1,6 @@
 import MobileSidebar from "@/components/mobile-sidebar";
 import Navbar from "@/components/navbar";
-import Sidebar from "@/components/sidebar"; // Make sure to import Sidebar
+import Sidebar from "@/components/sidebar"; 
 import { Providers } from "../providers";
 import { getApiLimitCount } from "@/lib/api-limt";
 
