@@ -1,22 +1,11 @@
 import type { Metadata } from "next";
-import NextTopLoader from 'nextjs-toploader';
+import NextTopLoader from "nextjs-toploader";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { clerkMiddleware } from "@clerk/nextjs/server";
 import { ClerkProvider } from "@clerk/nextjs";
-import { Providers } from './providers'
 import { ModalProvider } from "@/components/modal-provider";
-import {
-  SignInButton,
-  SignedIn,
-  SignedOut,
-  UserButton
-} from '@clerk/nextjs'
 import { CrispProvider } from "@/components/ui/crisp-provider";
-import { Toaster } from "react-hot-toast";
 import CustomToast from "./utils/toast";
-
-
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -35,12 +24,11 @@ export default function RootLayout({
 }>) {
   return (
     <ClerkProvider>
-    <html lang='en'>
-      <CrispProvider/>
-      <CustomToast/>
-      
-      <body>
-        <ModalProvider/>
+      <html lang="en" suppressHydrationWarning>
+        <body className={inter.className}>
+          <CrispProvider />
+          <CustomToast />
+          <ModalProvider />
         <NextTopLoader 
          color="linear-gradient(to right, rgb(251, 113, 133), rgb(217, 70, 239), rgb(99, 102, 241))"
          initialPosition={0.08}
@@ -57,10 +45,9 @@ export default function RootLayout({
          showAtBottom={false}/>
        
         
-        {children}
-      
-      </body>
-    </html>
-  </ClerkProvider>
+          {children}
+        </body>
+      </html>
+    </ClerkProvider>
   );
 }
