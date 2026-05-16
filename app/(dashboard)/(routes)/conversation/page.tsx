@@ -19,6 +19,7 @@ import { Empty } from '@/components/ui/empty';
 import { formSchema } from './constants';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import ReactMarkdown from 'react-markdown';
+import { showCustomToast } from '@/app/utils/toast';
 
 const ConversationPage = () => {
   const router = useRouter();
@@ -49,8 +50,11 @@ const ConversationPage = () => {
 
       setMessages((prev) => [...prev, userMessage, botMessage]);
       form.reset();
+      showCustomToast("🔥Text Generated Successfully!");
     } catch (error: any) {
       toast.error('Something went wrong.');
+      showCustomToast("❌ Failed to generate Text.");
+      
     } finally {
       router.refresh();
     }

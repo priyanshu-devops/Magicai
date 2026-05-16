@@ -14,6 +14,7 @@ import { UserAvatar } from '@/components/user-avatar';
 import { BotAvatar } from '@/components/bot-avatar';
 import ReactMarkdown from 'react-markdown';
 import { ScanEye, ImagePlus, XCircleIcon } from 'lucide-react'; // Import XCircle icon
+import { showCustomToast } from '@/app/utils/toast';
 
 const formSchema = z.object({
   prompt: z.string().min(1, 'Prompt is required'),
@@ -105,6 +106,7 @@ const Smart = () => {
       form.reset();
       setImage(null);
       setImagePreview(null);
+      showCustomToast("🔥 Generated successfully!");
     } catch (error) {
       toast.error('Something went wrong. Please try again.');
     } finally {

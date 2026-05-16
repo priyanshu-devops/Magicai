@@ -12,10 +12,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Loader } from '@/components/loader';
 import { Copy, ImagePlayIcon, Timer, Download, Eye, X, RefreshCw } from 'lucide-react';
+import { showCustomToast } from '@/app/utils/toast';
 
 const formSchema = z.object({
-  file: z.any().refine((file) => file && file.length > 0, 'File is required').transform((file) => file && file[0]),
+  file: z.instanceof(File, { message: "File is required" }),
 });
+
+type FormValues = z.infer<typeof formSchema>;
 
 const ImagePage = () => {
   const [originalImage, setOriginalImage] = useState<string | null>(null);
@@ -26,13 +29,13 @@ const ImagePage = () => {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null); // Stores the URL of the video for preview
   const [isChecking, setIsChecking] = useState(false);
 
-  const form = useForm({ resolver: zodResolver(formSchema), defaultValues: { file: null } });
+  const form = useForm<FormValues>({ resolver: zodResolver(formSchema) });
 
   useEffect(() => {
     localStorage.setItem('uuidList', JSON.stringify(uuidList));
   }, [uuidList]);
 
-  const onSubmit = async (values: any) => {
+  const onSubmit = async (values: FormValues) => {
     try {
       setLoading(true);
       setError(null);
@@ -76,9 +79,12 @@ const ImagePage = () => {
       };
 
       reader.readAsDataURL(file);
+      showCustomToast("🔥 Video will be generated in 10 minutes");
+
     } catch (error) {
       console.error('Error processing image:', error);
       setError('Failed to generate video. Please try again.');
+      showCustomToast("❌ Failed to generate Video.");
     } finally {
       setLoading(false);
     }
@@ -139,9 +145,9 @@ const ImagePage = () => {
           accept="image/*"
           disabled={loading}
           onChange={(e) => {
-            const file = e.target.files;
+            const file = e.target.files?.[0];
             if (file) {
-              form.setValue('file', file);
+              form.setValue("file", file);
             }
           }}
         />

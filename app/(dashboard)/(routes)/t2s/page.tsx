@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { showCustomToast } from "@/app/utils/toast";
 
 // 🔑 API Key from .env
 const API_KEY = process.env.NEXT_PUBLIC_ELEVENLABS_API_KEY;
@@ -80,8 +81,10 @@ const TTSPage = () => {
       const data = await response.json();
       setClonedVoiceId(data.voice_id);
       form.setValue("voice", data.voice_id);
+      showCustomToast("🎤 Voice cloned successfully!");
     } catch (error) {
       console.error("Error cloning voice:", error);
+      showCustomToast("❌ Voice cloning failed.");
     }
   };
 
@@ -118,8 +121,10 @@ const TTSPage = () => {
       const url = URL.createObjectURL(audioBlob);
 
       setAudios([{ url, name: values.prompt.replace(/[^a-zA-Z0-9]/g, "_") }]);
+      showCustomToast("🔥 Generated successfully!");
     } catch (error) {
       console.error("Error generating audio:", error);
+      showCustomToast("❌ Failed to generate audio.");
     } finally {
       router.refresh();
     }
@@ -133,6 +138,7 @@ const TTSPage = () => {
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
+    showCustomToast("📥 Audio downloaded!");
   };
 
   return (

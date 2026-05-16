@@ -1,57 +1,34 @@
-
-
 import { MAX_FREE_COUNTS } from "@/constants";
 import { auth } from "@clerk/nextjs/server";
 
 export const incrementApiLimit = async () => {
-  const { xId } = auth();
+  const { userId } = auth();
 
-  if (!xId) {
+  if (!userId) {
     return;
   }
 
-  const xApiLimit = await xxApiLimit.findUnique({
-    where: { xId: xId },
-  });
-
-  if (xApiLimit) {
-    await xxApiLimit.update({
-      where: { xId: xId },
-      data: { count: xApiLimit.count + 1 },
-    });
-  } else {
-    await xxApiLimit.create({
-      data: { xId: xId, count: 1 },
-    });
-  }
+  // TODO: wire up database-backed API limit tracking
 };
 
 export const checkApiLimit = async () => {
-  const { xId } = auth();
+  const { userId } = auth();
 
-  if (!xId) {
+  if (!userId) {
     return false;
   }
 
-  const xApiLimit = await x.xApiLimit.findUnique({
-    where: { xId: xId },
-  });
-
-  if (!xApiLimit || xApiLimit.count < MAX_FREE_COUNTS) {
-    return true;
-  } else {
-    return false;
-  }
+  // TODO: wire up database-backed API limit tracking
+  return true;
 };
 
-export const getApiLimitCount = async () => {
-  const { xId } = auth();
+export const getApiLimitCount = async (): Promise<number> => {
+  const { userId } = auth();
 
-  if (!xId) {
+  if (!userId) {
     return 0;
   }
 
-  
-
-
+  // TODO: wire up database-backed API limit tracking
+  return 0;
 };

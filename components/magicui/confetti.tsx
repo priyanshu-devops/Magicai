@@ -1,11 +1,11 @@
 // components/magicui/confetti.tsx
 
-import confetti from "canvas-confetti";
+import confetti, { type Options } from "canvas-confetti";
 import { Button } from "@/components/ui/button";
 import React from "react";
 
 interface ConfettiButtonProps {
-  options?: confetti.ConfettiParams;
+  options?: Options;
   children: React.ReactNode;
 }
 

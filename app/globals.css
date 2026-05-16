@@ -83,3 +83,11 @@ body,
     @apply bg-background text-foreground;
   }
 }
+@keyframes progressBar {
+  0% { width: 0%; }
+  100% { width: 100%; }
+}
+
+.animate-progress {
+  animation: progressBar 4s linear forwards;
+}

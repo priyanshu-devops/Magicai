@@ -12,12 +12,20 @@ import {
   SignedOut,
   UserButton
 } from '@clerk/nextjs'
+import { CrispProvider } from "@/components/ui/crisp-provider";
+import { Toaster } from "react-hot-toast";
+import CustomToast from "./utils/toast";
+
+
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "MagicAi",
   description: "AI Enhanced Multi-Function Web Platform",
+  icons: {
+    icon: "/favicon.ico", // Ensure this path is correct
+  },
 };
 
 export default function RootLayout({
@@ -28,6 +36,9 @@ export default function RootLayout({
   return (
     <ClerkProvider>
     <html lang='en'>
+      <CrispProvider/>
+      <CustomToast/>
+      
       <body>
         <ModalProvider/>
         <NextTopLoader 

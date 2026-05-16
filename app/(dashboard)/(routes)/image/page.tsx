@@ -16,7 +16,6 @@ import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem } from "@/components/ui/form";
 import { Loader } from "@/components/loader";
 import { Empty } from "@/components/ui/empty";
-import { cn } from "@/lib/utils";
 import {
   Select,
   SelectContent,
@@ -24,12 +23,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { amountOptions, formSchema, resolutionOptions } from "./constants";
+
+import { amountOptions, resolutionOptions, formSchema } from "./constants";
+import { showCustomToast } from "@/app/utils/toast";
 
 const ImagePage = () => {
   const router = useRouter();
-  
-  const [images, setImages] = useState<{ url: string, name: string }[]>([]);
+  const [images, setImages] = useState<{ url: string; name: string }[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -43,57 +43,62 @@ const ImagePage = () => {
 
   const isLoading = form.formState.isSubmitting;
 
+  // ClipDrop API call
+  const query = async (data: any): Promise<Blob> => {
+    const apiKey = process.env.NEXT_PUBLIC_CLIPDROP_API_KEY;
+    if (!apiKey) {
+      throw new Error("Missing ClipDrop API key");
+    }
+
+    const form = new FormData();
+    form.append('prompt', data.prompt);
+
+    const response = await fetch("https://clipdrop-api.co/text-to-image/v1", {
+      method: "POST",
+      headers: {
+        'x-api-key': apiKey,
+      },
+      body: form,
+    });
+
+    if (!response.ok) {
+      const errorResponse = await response.json();
+      console.error("Error response:", errorResponse);
+      throw new Error("Failed to generate image");
+    }
+
+    return await response.blob();
+  };
+
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
       setImages([]);
       setError(null);
 
+      // amount ke hisaab se multiple API calls
       const requests = Array.from({ length: parseInt(values.amount) }, () =>
-        query({
-          inputs: values.prompt,
-          options: {
-            resolution: values.resolution,
-          },
-        })
+        query({ prompt: values.prompt })
       );
 
       const responses = await Promise.all(requests);
 
-      const urls = responses.map((blob: Blob) => ({
+      const urls = responses.map((blob: Blob, i: number) => ({
         url: URL.createObjectURL(blob),
-        name: values.prompt.replace(/[^a-zA-Z0-9]/g, '_')
+        name: `${values.prompt.replace(/[^a-zA-Z0-9]/g, "_")}_${i + 1}`,
       }));
+
       setImages(urls);
-    } catch (error) {
-      console.error('Error generating image:', error);
-      setError('Failed to generate image. Please try again.');
+    } catch (err) {
+      console.error("Image generation error:", err);
+      setError("Failed to generate image. Please try again.");
+      showCustomToast("❌ Failed to generate image.");
     } finally {
       router.refresh();
     }
   };
 
-  const query = async (data) => {
-    const response = await fetch(
-      "https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-3.5-large",
-      {
-        headers: { Authorization: "Bearer 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" },
-        method: "POST",
-        body: JSON.stringify(data),
-      }
-    );
-
-    if (!response.ok) {
-      const errorResponse = await response.json();
-      console.error('Error response:', errorResponse);
-      throw new Error('Failed to generate image');
-    }
-
-    const blob = await response.blob();
-    return blob;
-  };
-
-  const downloadImage = (url, name) => {
-    const a = document.createElement('a');
+  const downloadImage = (url: string, name: string) => {
+    const a = document.createElement("a");
     a.href = url;
     a.download = `${name}.png`;
     document.body.appendChild(a);
@@ -111,134 +116,128 @@ const ImagePage = () => {
         bgColor="bg-pink-700/10"
       />
       <div className="px-4 lg:px-8">
-        <div>
-          <Form {...form}>
-            <form
-              onSubmit={form.handleSubmit(onSubmit)}
-              className="
-                rounded-lg 
-                border uuu
-                w-full 
-                p-4 
-                px-3 
-                md:px-6 
-                focus-within:shadow-sm
-                grid
-                grid-cols-12
-                gap-2
-              "
-            >
-              <FormField
-                name="prompt"
-                render={({ field }) => (
-                  <FormItem className="col-span-12 lg:col-span-6">
-                    <FormControl className="m-0 p-0">
-                      <Input
-                        className="border-0 outline-none focus-visible:ring-0 focus-visible:ring-transparent"
-                        disabled={isLoading}
-                        placeholder="A picture of a horse in Swiss alps"
-                        {...field}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="amount"
-                render={({ field }) => (
-                  <FormItem className="col-span-12 lg:col-span-2">
-                    <Select
+        <Form {...form}>
+          <form
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="
+              rounded-lg 
+              border 
+              w-full 
+              p-4 
+              px-3 
+              md:px-6 
+              focus-within:shadow-sm
+              grid
+              grid-cols-12
+              gap-2
+            "
+          >
+            <FormField
+              name="prompt"
+              render={({ field }) => (
+                <FormItem className="col-span-12 lg:col-span-6">
+                  <FormControl className="m-0 p-0">
+                    <Input
+                      className="border-0 outline-none focus-visible:ring-0 focus-visible:ring-transparent"
                       disabled={isLoading}
-                      onValueChange={field.onChange}
-                      value={field.value}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue defaultValue={field.value} />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {amountOptions.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="resolution"
-                render={({ field }) => (
-                  <FormItem className="col-span-12 lg:col-span-2">
-                    <Select
-                      disabled={isLoading}
-                      onValueChange={field.onChange}
-                      value={field.value}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue defaultValue={field.value} />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {resolutionOptions.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </FormItem>
-                )}
-              />
-              <Button
-                className="col-span-12 lg:col-span-2 w-full"
-                type="submit"
-                disabled={isLoading}
-                size="icon"
-              >
-                Generate
-              </Button>
-            </form>
-          </Form>
-          {isLoading && (
-            <div className="p-20">
-              <Loader />
-            </div>
-          )}
-          {error && (
-            <div className="p-4 text-red-500">
-              {error}
-            </div>
-          )}
-          {images.length === 0 && !isLoading && (
-            <Empty label="No images generated." />
-          )}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-8">
-            {images.map(({ url, name }) => (
-              <Card key={url} className="rounded-lg overflow-hidden">
-                <div className="relative aspect-square">
-                  <Image fill alt="Generated Image" src={url} />
-                </div>
-                <CardFooter className="p-2">
-                  <Button
-                    onClick={() => downloadImage(url, name)}
-                    variant="secondary"
-                    className="w-full"
+                      placeholder="A picture of a horse in Swiss alps"
+                      {...field}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="amount"
+              render={({ field }) => (
+                <FormItem className="col-span-12 lg:col-span-2">
+                  <Select
+                    disabled={isLoading}
+                    onValueChange={field.onChange}
+                    value={field.value}
                   >
-                    <Download className="h-4 w-4 mr-2" />
-                    Download
-                  </Button>
-                </CardFooter>
-              </Card>
-            ))}
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Amount" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {amountOptions.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="resolution"
+              render={({ field }) => (
+                <FormItem className="col-span-12 lg:col-span-2">
+                  <Select
+                    disabled={isLoading}
+                    onValueChange={field.onChange}
+                    value={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Resolution" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {resolutionOptions.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FormItem>
+              )}
+            />
+            <Button
+              className="col-span-12 lg:col-span-2 w-full"
+              type="submit"
+              disabled={isLoading}
+              size="icon"
+            >
+              Generate
+            </Button>
+          </form>
+        </Form>
+
+        {isLoading && (
+          <div className="p-20">
+            <Loader />
           </div>
+        )}
+
+        {error && <div className="p-4 text-red-500">{error}</div>}
+
+        {images.length === 0 && !isLoading && <Empty label="No images generated." />}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-8">
+          {images.map(({ url, name }) => (
+            <Card key={url} className="rounded-lg overflow-hidden">
+              <div className="relative aspect-square">
+                <Image fill alt="Generated Image" src={url} />
+              </div>
+              <CardFooter className="p-2">
+                <Button
+                  onClick={() => downloadImage(url, name)}
+                  variant="secondary"
+                  className="w-full"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Download
+                </Button>
+              </CardFooter>
+            </Card>
+          ))}
         </div>
       </div>
     </div>

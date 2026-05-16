@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem } from "@/components/ui/form";
 import toast from "react-hot-toast";
+import { showCustomToast } from "@/app/utils/toast";
 
 const formSchema = z.object({
   prompt: z.string().min(10, "Prompt must be at least 10 characters"),
@@ -79,7 +80,7 @@ const VideoPage = () => {
     }
   };
 
-  const checkStatus = async (uuidToCheck) => {
+  const checkStatus = async (uuidToCheck: string) => {
     try {
       setIsChecking(true);
       const response = await axios.get(
@@ -102,6 +103,7 @@ const VideoPage = () => {
 
       if (response.data.url) setPreviewUrl(response.data.url);
       toast.success("Video status updated!");
+      showCustomToast("🔥 Video will be generated in 10 minutes");
     } catch {
       toast.error("Failed to check status.");
     } finally {

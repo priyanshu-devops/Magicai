@@ -19,6 +19,7 @@ import { Empty } from '@/components/ui/empty';
 import { formSchema } from './constants';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import ReactMarkdown from 'react-markdown';
+import { showCustomToast } from '@/app/utils/toast';
 
 const ConversationPage = () => {
   const router = useRouter();
@@ -53,6 +54,7 @@ const ConversationPage = () => {
 
       setMessages((current) => [...current, userMessage, botMessage]);
       form.reset();
+      showCustomToast("🔥 Background removed successfully!");
     } catch (error: any) {
       toast.error('Something went wrong.');
     } finally {

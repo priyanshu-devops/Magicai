@@ -19,13 +19,16 @@ import { Loader } from '@/components/loader';
 import { Empty } from '@/components/ui/empty';
 
 import Meteors from '@/components/magicui/meteors';
+import toast from 'react-hot-toast';
+import { showCustomToast } from '@/app/utils/toast';
 
-// Update the schema to expect a single file, not an array
+
+
 const formSchema = z.object({
-  file: z
-    .instanceof(File)  // Ensure it's a File object
-    .refine((file) => file !== null, 'File is required'),
+  file: z.instanceof(File, { message: "File is required" }),
 });
+
+type FormValues = z.infer<typeof formSchema>;
 
 const ImagePage = () => {
   const router = useRouter();
@@ -35,16 +38,13 @@ const ImagePage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const form = useForm({
+  const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      file: null,
-    },
   });
 
   const isLoading = form.formState.isSubmitting || loading;
 
-  const onSubmit = async (values: any) => {
+  const onSubmit = async (values: FormValues) => {
     try {
       setLoading(true);
       setOriginalImage(null);
@@ -60,18 +60,22 @@ const ImagePage = () => {
         formData,
         {
           headers: {
-            'X-Api-Key': 'wEEoCfEGnMkoxJM1oh7wJuAJ',
+            'X-Api-Key': process.env.NEXT_PUBLIC_REMOVE_BG_API_KEY,
             'Content-Type': 'multipart/form-data',
           },
           responseType: 'blob',
         }
       );
 
-      const blob = new Blob([response.data], { type: 'image/png' });
-      const url = URL.createObjectURL(blob);
+      const blob = new Blob([response.data], { type: "image/png" });
+const url = URL.createObjectURL(blob);
 
-      setOriginalImage(URL.createObjectURL(values.file));
-      setProcessedImage(url);
+setOriginalImage(URL.createObjectURL(values.file));
+setProcessedImage(url);
+
+// ✅ Custom toast call
+showCustomToast("🔥 Background removed successfully!");
+
 
       // Only trigger confetti if no error
       confetti({
@@ -82,6 +86,7 @@ const ImagePage = () => {
     } catch (error) {
       console.error('Error removing background:', error);
       setError('Failed to remove background. Please try again.');
+      toast.error('Failed to remove background. Please try again.');
     } finally {
       setLoading(false);
       router.refresh(); // Refresh only after the process is complete
@@ -153,9 +158,9 @@ const ImagePage = () => {
                           accept="image/*"
                           disabled={isLoading}
                           onChange={(e) => {
-                            const file = e.target.files ? e.target.files[0] : null; // Get the first file if available
+                            const file = e.target.files ? e.target.files[0] : null; 
                             if (file) {
-                              form.setValue('file', file); // Set the single file (no array)
+                              form.setValue('file', file); 
                             }
                           }}
                           className="hidden"
