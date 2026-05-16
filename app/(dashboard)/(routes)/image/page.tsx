@@ -43,28 +43,22 @@ const ImagePage = () => {
 
   const isLoading = form.formState.isSubmitting;
 
-  // ClipDrop API call
-  const query = async (data: any): Promise<Blob> => {
-    const apiKey = process.env.NEXT_PUBLIC_CLIPDROP_API_KEY;
-    if (!apiKey) {
-      throw new Error("Missing ClipDrop API key");
-    }
-
-    const form = new FormData();
-    form.append('prompt', data.prompt);
-
-    const response = await fetch("https://clipdrop-api.co/text-to-image/v1", {
+  const query = async (prompt: string): Promise<Blob> => {
+    const response = await fetch("/api/image", {
       method: "POST",
-      headers: {
-        'x-api-key': apiKey,
-      },
-      body: form,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt }),
     });
 
     if (!response.ok) {
-      const errorResponse = await response.json();
-      console.error("Error response:", errorResponse);
-      throw new Error("Failed to generate image");
+      let message = "Failed to generate image.";
+      try {
+        const errorBody = await response.json();
+        message = errorBody.error || message;
+      } catch {
+        // response was not JSON
+      }
+      throw new Error(message);
     }
 
     return await response.blob();
@@ -77,7 +71,7 @@ const ImagePage = () => {
 
       // amount ke hisaab se multiple API calls
       const requests = Array.from({ length: parseInt(values.amount) }, () =>
-        query({ prompt: values.prompt })
+        query(values.prompt)
       );
 
       const responses = await Promise.all(requests);
@@ -90,8 +84,10 @@ const ImagePage = () => {
       setImages(urls);
     } catch (err) {
       console.error("Image generation error:", err);
-      setError("Failed to generate image. Please try again.");
-      showCustomToast("❌ Failed to generate image.");
+      const message =
+        err instanceof Error ? err.message : "Failed to generate image.";
+      setError(message);
+      showCustomToast(`❌ ${message}`);
     } finally {
       router.refresh();
     }
